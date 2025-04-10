@@ -1,425 +1,271 @@
 import streamlit as st
 import os
+import tempfile
 import time
-import shutil
 from pathlib import Path
-import subprocess
-from utils import (
-    generate_voiceover_text,
-    generate_voiceover_audio,
-    merge_video_with_audio
-)
+import uuid
+from utils import generate_voiceover_text, generate_voiceover_audio, merge_video_with_audio
 
-# Create a consistent temp directory
-APP_DIR = os.path.dirname(os.path.abspath(__file__))
-TEMP_DIR = os.path.join(APP_DIR, "temp")
-
-# Clear temp directory on app reload (only for initial load)
-if 'initialized' not in st.session_state:
-    if os.path.exists(TEMP_DIR):
-        try:
-            # Remove all files and subfolders in temp directory
-            for filename in os.listdir(TEMP_DIR):
-                file_path = os.path.join(TEMP_DIR, filename)
-                try:
-                    if os.path.isfile(file_path) or os.path.islink(file_path):
-                        os.unlink(file_path)
-                    elif os.path.isdir(file_path):
-                        shutil.rmtree(file_path)
-                except Exception as e:
-                    print(f"Failed to delete {file_path}. Reason: {e}")
-        except Exception as e:
-            print(f"Error clearing temp directory: {e}")
-    
-    # Mark as initialized so we don't clear temp folder on every interaction
-    st.session_state.initialized = True
-
-# Recreate the temp directory
-os.makedirs(TEMP_DIR, exist_ok=True)
-
+# Page configuration
 st.set_page_config(
-    page_title="Video Voiceover Generator",
+    page_title="VoxOver: AI Narration Studio",
+    page_icon="🎙️",
     layout="wide"
 )
 
-# Initialize session state variables
-if 'voiceover_text' not in st.session_state:
-    st.session_state.voiceover_text = ""
-if 'instructions' not in st.session_state:
-    st.session_state.instructions = ""
+# CSS styling
+st.markdown("""
+<style>
+    .main-header {
+        font-size: 2.5rem;
+        font-weight: bold;
+        margin-bottom: 1rem;
+    }
+    .sub-header {
+        font-size: 1.5rem;
+        font-weight: bold;
+        margin-top: 1rem;
+    }
+    .info-text {
+        font-size: 1rem;
+        color: #555;
+    }
+    .success-text {
+        color: #0f5132;
+        background-color: #d1e7dd;
+        padding: 1rem;
+        border-radius: 0.5rem;
+        margin-bottom: 1rem;
+    }
+    .stProgress .st-bo {
+        background-color: #4CAF50;
+    }
+    .stButton>button {
+        background-color: #4CAF50;
+        color: white;
+        font-weight: bold;
+    }
+</style>
+""", unsafe_allow_html=True)
+
+# Initialize session state variables if they don't exist
+if 'temp_dir' not in st.session_state:
+    st.session_state.temp_dir = tempfile.mkdtemp()
 if 'uploaded_video_path' not in st.session_state:
     st.session_state.uploaded_video_path = None
+if 'voiceover_text' not in st.session_state:
+    st.session_state.voiceover_text = None
 if 'audio_path' not in st.session_state:
     st.session_state.audio_path = None
 if 'merged_video_path' not in st.session_state:
     st.session_state.merged_video_path = None
-if 'audio_generated' not in st.session_state:
-    st.session_state.audio_generated = False
-if 'generate_clicked' not in st.session_state:
-    st.session_state.generate_clicked = False
-if 'merge_successful' not in st.session_state:
-    st.session_state.merge_successful = False
+if 'is_processing' not in st.session_state:
+    st.session_state.is_processing = False
+if 'current_step' not in st.session_state:
+    st.session_state.current_step = 1
+if 'processing_complete' not in st.session_state:
+    st.session_state.processing_complete = False
+if 'processing_error' not in st.session_state:
+    st.session_state.processing_error = None
+if 'unique_id' not in st.session_state:
+    st.session_state.unique_id = str(uuid.uuid4())
+
+# Function to reset the app state
+def reset_app_state():
+    st.session_state.uploaded_video_path = None
+    st.session_state.voiceover_text = None
+    st.session_state.audio_path = None
+    st.session_state.merged_video_path = None
+    st.session_state.is_processing = False
+    st.session_state.current_step = 1
+    st.session_state.processing_complete = False
+    st.session_state.processing_error = None
+    st.session_state.unique_id = str(uuid.uuid4())
     
-# Track if the app should switch to showing the merged video tab
-if 'show_merged_tab' not in st.session_state:
-    st.session_state.show_merged_tab = False
-
-# Callback functions
-def set_generate_clicked():
-    st.session_state.generate_clicked = True
-
-def set_generate_audio_clicked():
-    st.session_state.generate_audio_clicked = True
-    
-def set_merge_clicked():
-    st.session_state.merge_clicked = True
-
-def update_instructions():
-    st.session_state.instructions = st.session_state.temp_instructions
-
-def on_generate_voiceover_text():
-    try:
-        with st.spinner("Generating voiceover text..."):
-            generated_text = generate_voiceover_text(
-                st.session_state.uploaded_video_path, 
-                st.session_state.instructions
-            )
-            st.session_state.voiceover_text = generated_text
-            # Update the text area display value as well
-            st.session_state.temp_voiceover_text = generated_text
-            st.success("Voiceover text generated successfully!")
-    except Exception as e:
-        st.error(f"Error generating voiceover text: {e}")
-    finally:
-        st.session_state.generate_clicked = False
-
-def on_generate_audio():
-    if not st.session_state.voiceover_text:
-        st.warning("Please generate or enter voiceover text first.")
-        st.session_state.generate_audio_clicked = False
-        return
-        
-    try:
-        with st.spinner("Generating voiceover audio..."):
-            complete = generate_voiceover_audio(
-                st.session_state.voiceover_text,
-                st.session_state.audio_path,
-                voice_name=st.session_state.voice,
-                speed=1.0
-            )
-            if complete:
-                st.success("Voiceover audio generated successfully!")
-                # Verify audio file was created
-                if os.path.exists(st.session_state.audio_path) and os.path.getsize(st.session_state.audio_path) > 0:
-                    st.session_state.audio_generated = True
-                    # Add a short delay to ensure file is completely written
-                    time.sleep(1)
-                else:
-                    st.error(f"Audio file was not created at {st.session_state.audio_path}")
-            else:
-                st.error("Failed to generate voiceover audio.")
-    except Exception as e:
-        st.error(f"Error generating voiceover audio: {e}")
-    finally:
-        st.session_state.generate_audio_clicked = False
-
-def on_merge_audio_video():
-    if not st.session_state.audio_generated:
-        st.warning("Please generate voiceover audio first.")
-        st.session_state.merge_clicked = False
-        return
-        
-    audio_path = st.session_state.audio_path
-    # Additional verification of audio file
-    if not (os.path.exists(audio_path) and os.path.getsize(audio_path) > 0):
-        st.error(f"Audio file missing or empty: {audio_path}")
-        st.session_state.merge_clicked = False
-        return
-        
-    # Debug info
-    st.info(f"Audio path: {audio_path}")
-    st.info(f"Audio file size: {os.path.getsize(audio_path)} bytes")
-    
-    # Make a safety copy of the audio file in case it gets deleted during merge
-    audio_backup_path = audio_path + ".backup"
-    try:
-        shutil.copy2(audio_path, audio_backup_path)
-    except Exception as e:
-        st.warning(f"Couldn't create backup of audio file: {e}")
-    
-    try:
-        # First try with MoviePy
-        with st.spinner("Merging audio with video..."):
+    # Clear temp directory
+    if os.path.exists(st.session_state.temp_dir):
+        for file in os.listdir(st.session_state.temp_dir):
+            file_path = os.path.join(st.session_state.temp_dir, file)
             try:
-                merged_path = merge_video_with_audio(
-                    st.session_state.uploaded_video_path,
-                    audio_path,
-                    st.session_state.merged_video_path,
-                    st.session_state.video_volume,
-                    st.session_state.audio_volume
-                )
-                st.success(f"Video and audio merged successfully! {st.session_state.merged_video_path}")
-                
-                # Set merge successful flag
-                st.session_state.merge_successful = True
-                
+                if os.path.isfile(file_path):
+                    os.unlink(file_path)
             except Exception as e:
-                st.warning(f"First merge attempt failed: {e}. Trying direct FFmpeg method...")
-                
-                # Check if audio file was deleted during the first attempt
-                if not os.path.exists(audio_path) and os.path.exists(audio_backup_path):
-                    st.info("Restoring audio file from backup...")
-                    shutil.copy2(audio_backup_path, audio_path)
-                
-                # If MoviePy fails, try direct FFmpeg
-                try:
-                    # Modified FFmpeg command to handle both video and added audio volumes
-                    cmd = [
-                        'ffmpeg',
-                        '-y',  # Overwrite output if it exists
-                        '-i', st.session_state.uploaded_video_path,  # Input video
-                        '-i', audio_path,  # Input audio
-                        '-filter_complex', 
-                        f'[0:a]volume={st.session_state.video_volume}[va];[1:a]volume={st.session_state.audio_volume}[aa];[va][aa]amix=inputs=2:duration=shortest[a]',
-                        '-map', '0:v',  # Map video from first input
-                        '-map', '[a]',  # Map adjusted audio
-                        '-c:v', 'copy',  # Copy video codec (no re-encoding)
-                        '-c:a', 'aac',  # Use AAC for audio
-                        '-shortest',  # End when shortest input stream ends
-                        st.session_state.merged_video_path
-                    ]
-                    
-                    result = subprocess.run(
-                        cmd,
-                        stdout=subprocess.PIPE,
-                        stderr=subprocess.PIPE,
-                        text=True
-                    )
-                    
-                    if result.returncode == 0:
-                        st.success("Video and audio merged successfully using direct FFmpeg!")
-                        # Set merge successful flag
-                        st.session_state.merge_successful = True
-                    else:
-                        st.error(f"FFmpeg error: {result.stderr}")
-                except Exception as fallback_error:
-                    st.error(f"Both merge methods failed. Error in fallback method: {fallback_error}")
-    finally:
-        st.session_state.merge_clicked = False
-        # Clean up backup file
-        if os.path.exists(audio_backup_path):
-            try:
-                os.remove(audio_backup_path)
-            except:
-                pass
+                st.error(f"Error deleting file {file_path}: {e}")
 
-# Main app title
-st.title("Video Voiceover Generator")
+# Generate voiceover text based on video content and instructions
+def process_video_for_text(video_path, instructions):
+    try:
+        st.session_state.current_step = 2
+        with st.spinner("Analyzing video content and generating voiceover text..."):
+            voiceover_text = generate_voiceover_text(video_path, instructions)
+            st.session_state.voiceover_text = voiceover_text
+            st.session_state.current_step = 3
+        return voiceover_text
+    except Exception as e:
+        st.session_state.processing_error = f"Error generating voiceover text: {str(e)}"
+        return None
 
-# Video upload section
-uploaded_file = st.file_uploader("Upload a video file", type=["mp4", "mov", "avi"])
+# Generate audio from voiceover text
+def generate_audio(voiceover_text, voice_name, speed):
+    try:
+        st.session_state.current_step = 4
+        audio_path = os.path.join(st.session_state.temp_dir, f"voiceover_{st.session_state.unique_id}.mp3")
+        with st.spinner("Converting text to speech..."):
+            generate_voiceover_audio(voiceover_text, audio_path, voice_name, speed)
+            st.session_state.audio_path = audio_path
+            st.session_state.current_step = 5
+        return audio_path
+    except Exception as e:
+        st.session_state.processing_error = f"Error generating audio: {str(e)}"
+        return None
 
-if uploaded_file is not None:
-    # Save the uploaded video to our consistent temp directory
-    video_path = os.path.join(TEMP_DIR, uploaded_file.name)
-    
-    # Write the file
-    with open(video_path, "wb") as f:
-        f.write(uploaded_file.getbuffer())
-    
-    # Update session state
-    st.session_state.uploaded_video_path = video_path
-    
-    # Create the audio path based on the video path
-    filename = os.path.basename(video_path)
-    base_name = os.path.splitext(filename)[0]
-    audio_path = os.path.join(TEMP_DIR, f"{base_name}.mp3")
-    st.session_state.audio_path = audio_path
-    
-    # Create the merged video path
-    merged_path = os.path.join(TEMP_DIR, f"{base_name}_merged{os.path.splitext(filename)[1]}")
-    st.session_state.merged_video_path = merged_path
+# Merge video with audio
+def merge_video_audio(video_path, audio_path, video_volume, audio_volume):
+    try:
+        st.session_state.current_step = 6
+        merged_path = os.path.join(st.session_state.temp_dir, f"merged_{st.session_state.unique_id}.mp4")
+        with st.spinner("Merging video with voiceover audio..."):
+            merge_video_with_audio(video_path, audio_path, merged_path, video_volume, audio_volume)
+            st.session_state.merged_video_path = merged_path
+            st.session_state.current_step = 7
+            st.session_state.processing_complete = True
+        return merged_path
+    except Exception as e:
+        st.session_state.processing_error = f"Error merging video with audio: {str(e)}"
+        return None
 
-    # Main interface with two columns
-    col1, col2 = st.columns([2, 1])
+# Main app header
+st.markdown('<div class="main-header">🎙️ VoxOver: AI Narration Studio</div>', unsafe_allow_html=True)
+st.markdown('<div class="info-text">Create professional AI voiceovers for your videos with ease.</div>', unsafe_allow_html=True)
+
+# Create two columns for the main layout
+col1, col2 = st.columns([3, 2])
+
+with col1:
+    # Step progress indicator
+    steps = ["Upload Video", "Analyze Video", "Edit Script", "Generate Audio", "Set Volumes", "Merge Media", "Download"]
+    current_step = st.session_state.current_step
+    progress_value = current_step / len(steps)
     
-    with col1:
-        # Get tab index based on merge status
-        tab_index = 1 if st.session_state.merge_successful else 0
+    st.progress(progress_value)
+    st.write(f"Step {current_step} of {len(steps)}: {steps[current_step-1]}")
+    
+    # File upload section
+    st.markdown('<div class="sub-header">Step 1: Upload Your Video</div>', unsafe_allow_html=True)
+    uploaded_file = st.file_uploader("Choose a video file", type=["mp4", "mov", "avi", "wmv"], key="video_uploader")
+    
+    if uploaded_file is not None and st.session_state.uploaded_video_path is None:
+        # Save uploaded file to temporary directory
+        temp_video_path = os.path.join(st.session_state.temp_dir, f"uploaded_{st.session_state.unique_id}.mp4")
+        with open(temp_video_path, "wb") as f:
+            f.write(uploaded_file.getbuffer())
+        st.session_state.uploaded_video_path = temp_video_path
+        st.success(f"Video uploaded successfully: {uploaded_file.name}")
+    
+    # Instructions text area
+    st.markdown('<div class="sub-header">Step 2: Provide Voiceover Instructions</div>', unsafe_allow_html=True)
+    instructions = st.text_area(
+        "Describe the style and content you want for your voiceover:",
+        placeholder="Example: Create a professional, enthusiastic narration that explains the key points shown in the video. Use a conversational tone suitable for a marketing presentation.",
+        height=100
+    )
+    
+    # Generate voiceover text button
+    if st.session_state.uploaded_video_path is not None and st.button("Generate Voiceover Text", key="generate_text_button"):
+        if not instructions:
+            st.warning("Please provide instructions for the voiceover style and content.")
+        else:
+            st.session_state.is_processing = True
+            process_video_for_text(st.session_state.uploaded_video_path, instructions)
+    
+    # Display and edit voiceover text
+    if st.session_state.voiceover_text is not None:
+        st.markdown('<div class="sub-header">Step 3: Edit Voiceover Script</div>', unsafe_allow_html=True)
+        edited_text = st.text_area("Edit the generated voiceover text if needed:", value=st.session_state.voiceover_text, height=200)
         
-        # Create tabs for videos
-        video_tabs = st.tabs(["Original Video", "Video with Voiceover"])
+        # Voice selection options
+        st.markdown('<div class="sub-header">Step 4: Select Voice and Speed</div>', unsafe_allow_html=True)
+        voice_col1, voice_col2 = st.columns(2)
         
-        # Original video tab
-        with video_tabs[0]:
-            # Use CSS to control the video width
-            st.markdown("""
-            <style>
-            .stVideo {
-                width: 400px !important;
-            }
-            </style>
-            """, unsafe_allow_html=True)
-            st.video(video_path)
+        with voice_col1:
+            voice_name = st.selectbox(
+                "Select AI Voice:",
+                options=["nova", "alloy", "echo", "fable", "onyx", "shimmer"]
+            )
         
-        # Merged video tab
-        with video_tabs[1]:
-            # Check if the merge is successful before displaying the video
-            if st.session_state.merge_successful and os.path.exists(st.session_state.merged_video_path) and os.path.getsize(st.session_state.merged_video_path) > 0:
-                st.video(st.session_state.merged_video_path)
-                # Add a refresh button to reload the video if needed
-                if st.button("Refresh Video"):
-                    st.rerun()
+        with voice_col2:
+            speed = st.slider("Speech Speed:", min_value=0.5, max_value=2.0, value=1.0, step=0.1)
+        
+        # Generate audio button
+        if st.button("Generate Voiceover Audio", key="generate_audio_button"):
+            st.session_state.voiceover_text = edited_text  # Update with edited text
+            generate_audio(edited_text, voice_name, speed)
+    
+    # Volume adjustment sliders
+    if st.session_state.audio_path is not None:
+        st.markdown('<div class="sub-header">Step 5: Adjust Volume Levels</div>', unsafe_allow_html=True)
+        vol_col1, vol_col2 = st.columns(2)
+        
+        with vol_col1:
+            video_volume = st.slider("Original Video Volume:", min_value=0.0, max_value=1.0, value=0.3, step=0.1)
+        
+        with vol_col2:
+            audio_volume = st.slider("Voiceover Volume:", min_value=0.0, max_value=1.0, value=1.0, step=0.1)
+        
+        # Merge button
+        if st.button("Merge Video with Voiceover", key="merge_button"):
+            merge_video_audio(
+                st.session_state.uploaded_video_path,
+                st.session_state.audio_path,
+                video_volume,
+                audio_volume
+            )
+
+with col2:
+    # Display error message if any
+    if st.session_state.processing_error:
+        st.error(st.session_state.processing_error)
+    
+    # Display the videos in tabs
+    st.markdown('<div class="sub-header">Preview</div>', unsafe_allow_html=True)
+    
+    tab1, tab2 = st.tabs(["Original Video", "Video with Voiceover"])
+    
+    with tab1:
+        if st.session_state.uploaded_video_path:
+            st.video(st.session_state.uploaded_video_path)
+        else:
+            st.info("Upload a video to see preview")
+    
+    with tab2:
+        if st.session_state.merged_video_path:
+            st.video(st.session_state.merged_video_path)
+            
+            # Download button for final video
+            st.markdown('<div class="sub-header">Step 7: Download Final Video</div>', unsafe_allow_html=True)
+            
+            with open(st.session_state.merged_video_path, "rb") as file:
+                st.download_button(
+                    label="Download Video with Voiceover",
+                    data=file,
+                    file_name=f"VoxOver_{Path(st.session_state.uploaded_video_path).stem}_{st.session_state.unique_id}.mp4",
+                    mime="video/mp4",
+                    key="download_button"
+                )
+            
+            st.markdown('<div class="success-text">✅ Processing complete! Your video with AI voiceover is ready to download.</div>', unsafe_allow_html=True)
+        else:
+            if st.session_state.current_step >= 3:
+                st.info("Complete all steps to generate the final video with voiceover")
             else:
-                st.info("Merged video will appear here after processing")
-    
-    with col2:
-        # Instructions for voiceover
-        st.subheader("Voiceover Instructions")
-        
-        # Use a key for the text area and a callback to update session state
-        if 'temp_instructions' not in st.session_state:
-            st.session_state.temp_instructions = st.session_state.instructions
-            
-        st.text_area(
-            "Enter instructions for the voiceover style/content:",
-            key="temp_instructions",
-            on_change=update_instructions,
-            height=150
-        )
-        
-        # Generate voiceover text button with session state to track clicks
-        if 'generate_clicked' not in st.session_state:
-            st.session_state.generate_clicked = False
-            
-        st.button(
-            "Generate Voiceover Text", 
-            on_click=set_generate_clicked, 
-            key="generate_button"
-        )
-        
-        # Process the button click using session state
-        if st.session_state.generate_clicked:
-            on_generate_voiceover_text()
-    
-    # Editable voiceover text
-    st.subheader("Voiceover Text")
-    
-    # Initialize temp_voiceover_text with current value if it doesn't exist
-    if 'temp_voiceover_text' not in st.session_state:
-        st.session_state.temp_voiceover_text = st.session_state.voiceover_text
-        
-    def update_voiceover_text():
-        st.session_state.voiceover_text = st.session_state.temp_voiceover_text
-    
-    # Display the generated/edited text
-    voiceover_text_area = st.text_area(
-        "Edit voiceover text if needed:",
-        value=st.session_state.temp_voiceover_text,  # Use the value directly
-        key="temp_voiceover_text",
-        on_change=update_voiceover_text,
-        height=200
-    )
-    
-    # Voice selection and audio generation
-    col1, col2 = st.columns([1, 2])
-    
-    with col1:
-        # Store voice selection in session state
-        voice_options = ['nova', 'alloy', 'ash', 'ballad', 'coral', 
-                 'echo', 'fable', 'onyx', 'sage', 'shimmer']
-        
-        # Initialize voice if not already set
-        if 'voice' not in st.session_state:
-            st.session_state.voice = 'nova'
-            
-        # Display voice selector with current value
-        st.session_state.voice = st.selectbox(
-            "Voice",
-            options=voice_options,
-            index=voice_options.index(st.session_state.voice)
-        )
-    
-    with col2:
-        # Button with session state tracking
-        if 'generate_audio_clicked' not in st.session_state:
-            st.session_state.generate_audio_clicked = False
-            
-        st.button(
-            "Generate Voiceover Audio", 
-            on_click=set_generate_audio_clicked,
-            key="generate_audio_button"
-        )
-        
-        # Process audio generation if button was clicked
-        if st.session_state.generate_audio_clicked:
-            on_generate_audio()
-            
-        # Display audio player if audio exists
-        if st.session_state.audio_generated and os.path.exists(st.session_state.audio_path):
-            st.audio(st.session_state.audio_path)
-    
-    # Volume sliders and merge button
-    st.subheader("Merge Audio with Video")
-    
-    # Video volume slider
-    if 'video_volume' not in st.session_state:
-        st.session_state.video_volume = 1.0
-        
-    video_volume_percent = st.slider(
-        "Original Video Volume", 
-        min_value=0, 
-        max_value=100, 
-        value=100,
-        format="%d%%"
-    )
-    st.session_state.video_volume = video_volume_percent / 100.0
-    
-    # Voiceover audio volume slider
-    if 'audio_volume' not in st.session_state:
-        st.session_state.audio_volume = 1.0
-        
-    audio_volume_percent = st.slider(
-        "Voiceover Volume", 
-        min_value=0, 
-        max_value=100, 
-        value=100,
-        format="%d%%"
-    )
-    st.session_state.audio_volume = audio_volume_percent / 100.0
-    
-    # Button with session state tracking
-    if 'merge_clicked' not in st.session_state:
-        st.session_state.merge_clicked = False
-        
-    st.button(
-        "Merge Voiceover with Video", 
-        on_click=set_merge_clicked,
-        key="merge_button"
-    )
-    
-    # Process merge if button was clicked
-    if st.session_state.merge_clicked:
-        on_merge_audio_video()
-        
-        # If merge was successful, switch to the merged video tab
-        if st.session_state.merge_successful:
-            # Force a rerun to update the UI and show the merged video
-            st.rerun()
-else:
-    st.info("Please upload a video file to begin.")
+                st.info("Upload a video and follow the steps on the left to create your voiceover")
 
-# Add a footer with instructions
+# Reset button at the bottom
+if st.session_state.uploaded_video_path is not None:
+    if st.button("Start Over", key="reset_button"):
+        reset_app_state()
+        st.rerun()
+
+# Footer
 st.markdown("---")
-st.markdown("""
-### How to use:
-1. Upload your video file
-2. Enter instructions for the voiceover style and content
-3. Generate the voiceover text and edit if needed
-4. Select a voice and generate the voiceover audio
-5. Adjust the volume of both the original video and voiceover audio
-6. Merge the audio with your video
-7. View the final video with voiceover in the second tab
-
-Note: Temporary files are automatically cleared when you reload the app.
-""")
+st.markdown('<div class="info-text">VoxOver: AI Narration Studio - Create professional voiceovers for your videos with ease.</div>', unsafe_allow_html=True)
