@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VoxOver: AI Narration Studio - Setup Instructions</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        h1 {
+            color: #2c3e50;
+            border-bottom: 2px solid #3498db;
+            padding-bottom: 10px;
+        }
+        h2 {
+            color: #2980b9;
+            margin-top: 30px;
+        }
+        h3 {
+            color: #3498db;
+        }
+        code {
+            background-color: #f7f7f7;
+            padding: 2px 5px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+        }
+        pre {
+            background-color: #f7f7f7;
+            padding: 15px;
+            border-radius: 5px;
+            overflow-x: auto;
+            font-family: 'Courier New', monospace;
+        }
+        .step {
+            background-color: #f9f9f9;
+            border-left: 4px solid #3498db;
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 0 5px 5px 0;
+        }
+        .note {
+            background-color: #ffffdd;
+            border-left: 4px solid #ffcc00;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 0 5px 5px 0;
+        }
+        .warning {
+            background-color: #ffeeee;
+            border-left: 4px solid #ff6666;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 0 5px 5px 0;
+        }
+    </style>
+</head>
+<body>
+    <h1>VoxOver: AI Narration Studio - Setup Instructions</h1>
+    
+    <p>This guide will walk you through setting up and running the VoxOver AI Narration Studio locally on your computer.</p>
+    
+    <div class="note">
+        <strong>Note:</strong> This guide assumes you already have Python and VS Code installed on your computer.
+    </div>
+
+    <h2>1. Install FFmpeg</h2>
+    
+    <p>FFmpeg is required for video and audio processing. Installation varies by operating system:</p>
+    
+    <h3>Windows</h3>
+    <div class="step">
+        <ol>
+            <li>Download FFmpeg from <a href="https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.zip">https://www.gyan.dev/ffmpeg/builds/</a> (the "release essentials" package)</li>
+            <li>Extract the ZIP file to a location on your computer (e.g., <code>C:\FFmpeg</code>)</li>
+            <li>Add FFmpeg to your system PATH:
+                <ul>
+                    <li>Search for "Environment Variables" in the Start menu and select "Edit the system environment variables"</li>
+                    <li>Click the "Environment Variables" button</li>
+                    <li>Under "System Variables", find the "Path" variable, select it, and click "Edit"</li>
+                    <li>Click "New" and add the path to the FFmpeg bin directory (e.g., <code>C:\FFmpeg\bin</code>)</li>
+                    <li>Click "OK" on all dialogs to save your changes</li>
+                </ul>
+            </li>
+            <li>Verify the installation by opening a new Command Prompt and typing:
+                <pre>ffmpeg -version</pre>
+            </li>
+        </ol>
+    </div>
+
+    <h3>macOS</h3>
+    <div class="step">
+        <p>Using Homebrew (recommended):</p>
+        <ol>
+            <li>If you don't have Homebrew installed, install it first:
+                <pre>/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"</pre>
+            </li>
+            <li>Install FFmpeg:
+                <pre>brew install ffmpeg</pre>
+            </li>
+            <li>Verify the installation:
+                <pre>ffmpeg -version</pre>
+            </li>
+        </ol>
+    </div>
+
+    <h3>Linux (Ubuntu/Debian)</h3>
+    <div class="step">
+        <ol>
+            <li>Update your package list:
+                <pre>sudo apt update</pre>
+            </li>
+            <li>Install FFmpeg:
+                <pre>sudo apt install ffmpeg</pre>
+            </li>
+            <li>Verify the installation:
+                <pre>ffmpeg -version</pre>
+            </li>
+        </ol>
+    </div>
+
+    <h2>2. Create GitHub Repository (Optional)</h2>
+    
+    <div class="step">
+        <ol>
+            <li>Go to <a href="https://github.com">GitHub</a> and sign in to your account</li>
+            <li>Click on the "+" icon in the top-right corner and select "New repository"</li>
+            <li>Name your repository (e.g., "voxover-ai-narration-studio")</li>
+            <li>Add an optional description</li>
+            <li>Choose whether to make it public or private</li>
+            <li>Click "Create repository"</li>
+        </ol>
+    </div>
+
+    <h2>3. Clone Repository in VS Code</h2>
+    
+    <div class="step">
+        <ol>
+            <li>Open VS Code</li>
+            <li>Press <code>Ctrl+Shift+P</code> (Windows/Linux) or <code>Cmd+Shift+P</code> (macOS) to open the command palette</li>
+            <li>Type "Git: Clone" and select the command</li>
+            <li>Paste your repository URL or select the repository from the list if you're signed in to GitHub in VS Code</li>
+            <li>Select a folder on your local machine where you want to clone the repository</li>
+            <li>Click "Open" when prompted to open the cloned repository</li>
+        </ol>
+        <p>If you skipped creating a GitHub repository, simply create a new folder on your computer and open it in VS Code.</p>
+    </div>
+
+    <h2>4. Add Project Files</h2>
+    
+    <div class="step">
+        <ol>
+            <li>Download the following files from the class website:
+                <ul>
+                    <li><code>utils.py</code></li>
+                    <li><code>genai.py</code></li>
+                    <li><code>requirements.txt</code></li>
+                    <li><code>ai_prompt.txt</code></li>
+                </ul>
+            </li>
+            <li>Add these files to your project folder (the one you opened in VS Code)</li>
+            <li>Create a new file named <code>.env</code> in your project folder</li>
+            <li>Add your OpenAI API key to the .env file:
+                <pre>OPENAI_API_KEY=your_openai_api_key_here</pre>
+            </li>
+            <li>Install required packages using pip:
+                <pre>pip install -r requirements.txt</pre>
+            </li>
+            <li>Create a <code>temp</code> folder in your project directory:
+                <pre>mkdir temp</pre>
+            </li>
+        </ol>
+    </div>
+
+    <h2>5. Create app.py Using AI</h2>
+    
+    <div class="step">
+        <ol>
+            <li>Open the <code>ai_prompt.txt</code> file to view the prompt</li>
+            <li>Copy the content of this file</li>
+            <li>Go to ChatGPT, Claude, or another AI assistant of your choice</li>
+            <li>Paste the prompt into the AI chat</li>
+            <li>Upload <code>utils.py</code> and <code>genai.py</code> files to the AI (if the AI supports file uploads)</li>
+            <li>The AI will generate code for <code>app.py</code></li>
+            <li>Copy the generated code</li>
+            <li>Create a new file named <code>app.py</code> in your project folder in VS Code</li>
+            <li>Paste the code into this file and save it</li>
+        </ol>
+    </div>
+
+    <h2>6. Run the Streamlit App</h2>
+    
+    <div class="step">
+        <ol>
+            <li>Open a terminal in VS Code:
+                <ul>
+                    <li>Select Terminal > New Terminal from the menu</li>
+                </ul>
+            </li>
+            <li>In the terminal, run:
+                <pre>streamlit run app.py</pre>
+            </li>
+            <li>Alternatively, you can enable automatic reloading when you edit the code (optional):
+                <pre>streamlit run app.py --server.runOnSave=true</pre>
+                <p>With this option, whenever you make changes to your code and save, the app will automatically reload with your changes.</p>
+            </li>
+            <li>Your app should automatically open in your default web browser</li>
+            <li>If it doesn't open automatically, you can access it at <a href="http://localhost:8501">http://localhost:8501</a></li>
+        </ol>
+    </div>
+
+    <h2>7. Deploy Online (Optional)</h2>
+    
+    <div class="step">
+        <ol>
+            <li>Make sure your code is pushed to GitHub:
+                <pre>git add .
+git commit -m "Initial commit"
+git push</pre>
+            </li>
+            <li>Go to <a href="https://streamlit.io/cloud">Streamlit Cloud</a></li>
+            <li>Sign in with your GitHub account</li>
+            <li>Click "New app"</li>
+            <li>Select your repository, branch (usually "main"), and specify the path to the app file (app.py)</li>
+            <li>Click "Deploy"</li>
+            <li>Once deployed, go to the app settings</li>
+            <li>Add your OpenAI API key as a secret:
+                <ul>
+                    <li>Go to "Secrets" in the app settings</li>
+                    <li>Add your OpenAI API key in TOML format:
+                        <pre>OPENAI_API_KEY = "your_openai_api_key_here"</pre>
+                    </li>
+                </ul>
+            </li>
+            <li>Your app is now available online and can be shared with others!</li>
+        </ol>
+    </div>
+
+    <h2>Troubleshooting</h2>
+    
+    <div class="warning">
+        <h3>Common Issues:</h3>
+        <ul>
+            <li><strong>FFmpeg not found error:</strong> Make sure FFmpeg is properly installed and added to your PATH.</li>
+            <li><strong>API key errors:</strong> Check that your <code>.env</code> file contains the correct OpenAI API key.</li>
+            <li><strong>Memory errors during video processing:</strong> Try with smaller video files if you encounter memory issues.</li>
+            <li><strong>Module not found errors:</strong> Ensure all dependencies are installed via <code>pip install -r requirements.txt</code>.</li>
+        </ul>
+    </div>
+
+    <div class="note">
+        <h3>Using the App</h3>
+        <p>Once your app is running, you can:</p>
+        <ol>
+            <li>Upload a video file</li>
+            <li>Enter instructions for the voiceover style/content</li>
+            <li>Generate and edit the voiceover text</li>
+            <li>Select a voice and generate the audio</li>
+            <li>Adjust the volume levels and merge with your video</li>
+            <li>View and download the final video with voiceover</li>
+        </ol>
+    </div>
+</body>
+</html>
