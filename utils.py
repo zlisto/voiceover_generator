@@ -1,13 +1,8 @@
 import os
-import tempfile
-import time
-from pathlib import Path
-import subprocess
-import logging
 from genai import GenAI
 from moviepy import VideoFileClip
-
-
+from elevenlabs import ElevenLabs
+from elevenlabs import VoiceSettings
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -16,6 +11,10 @@ OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 ELEVENLABS_API_KEY = os.getenv('ELEVENLABS_API_KEY')
 
 jarvis = GenAI(OPENAI_API_KEY)
+
+
+
+
 
 
 
@@ -56,16 +55,48 @@ def generate_voiceover_text(video_path, instructions):
 
     
 
-def generate_voiceover_audio(voiceover_text, 
+def generate_voiceover_audio(text, 
                              file_path, 
                             voice_name='nova', 
                              speed=1.0):
-    complete  = jarvis.generate_audio(voiceover_text,
+    complete  = jarvis.generate_audio(text,
                            file_path, 
                            model='gpt-4o-mini-tts', 
                            voice=voice_name, 
                            speed=speed)
     return complete
+
+def generate_voiceover_audio_elevenlabs(text, 
+                                        file_path,  
+                                        model_id="eleven_multilingual_v2",    
+                                        voice_id="dR1Ptm3rjBUIbHiaywdJ",
+                                        speed=1.0):
+    """
+    Generate speech from text using ElevenLabs, with voice cloning.
+
+    Loads ELEVEN_API_KEY from .env file using python-dotenv.
+    """
+
+    
+    client = ElevenLabs(
+        api_key=ELEVENLABS_API_KEY,
+    )
+    audio = client.text_to_speech.convert(
+            voice_id=voice_id,
+            output_format="mp3_44100_128",
+            text=text,
+            model_id=model_id,
+            voice_settings=VoiceSettings(
+                speed=speed
+            )
+        )
+
+    # Save the bytes to a file
+    with open(file_path, 'wb') as f:
+        for chunk in audio:
+            f.write(chunk)
+    return True
+
 
 def merge_video_with_audio(video_path, audio_path, merged_path, video_volume=1.0, audio_volume=1.0):
     """

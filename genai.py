@@ -1,18 +1,13 @@
 # Standard library imports
 import os
-import json
 import base64
 import time
 import tempfile
-import re
 
 # Third-party imports
 import openai
-import requests
-import pandas as pd
 import PyPDF2
 from docx import Document
-from bs4 import BeautifulSoup
 from moviepy import VideoFileClip
 
 

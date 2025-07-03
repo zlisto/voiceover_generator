@@ -1,6 +1,5 @@
 streamlit
 moviepy==2.1.2
-python-ffmpeg==1.0.16
 openai
 python-dotenv
 numpy
@@ -8,5 +7,6 @@ Pillow
 requests
 PyPDF2
 python-docx
-beautifulsoup4
 pandas
+elevenlabs
+

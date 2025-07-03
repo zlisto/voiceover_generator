@@ -4,7 +4,7 @@ import tempfile
 import time
 from pathlib import Path
 import uuid
-from utils import generate_voiceover_text, generate_voiceover_audio, merge_video_with_audio
+from utils import *
 
 # Page configuration
 st.set_page_config(
@@ -111,7 +111,8 @@ def generate_audio(voiceover_text, voice_name, speed):
         st.session_state.current_step = 4
         audio_path = os.path.join(st.session_state.temp_dir, f"voiceover_{st.session_state.unique_id}.mp3")
         with st.spinner("Converting text to speech..."):
-            generate_voiceover_audio(voiceover_text, audio_path, voice_name, speed)
+            generate_voiceover_audio_elevenlabs(voiceover_text, 
+            audio_path)
             st.session_state.audio_path = audio_path
             st.session_state.current_step = 5
         return audio_path
@@ -183,23 +184,10 @@ with col1:
         st.markdown('<div class="sub-header">Step 3: Edit Voiceover Script</div>', unsafe_allow_html=True)
         edited_text = st.text_area("Edit the generated voiceover text if needed:", value=st.session_state.voiceover_text, height=200)
         
-        # Voice selection options
-        st.markdown('<div class="sub-header">Step 4: Select Voice and Speed</div>', unsafe_allow_html=True)
-        voice_col1, voice_col2 = st.columns(2)
-        
-        with voice_col1:
-            voice_name = st.selectbox(
-                "Select AI Voice:",
-                options=["nova", "alloy", "echo", "fable", "onyx", "shimmer"]
-            )
-        
-        with voice_col2:
-            speed = st.slider("Speech Speed:", min_value=0.5, max_value=2.0, value=1.0, step=0.1)
-        
         # Generate audio button
         if st.button("Generate Voiceover Audio", key="generate_audio_button"):
             st.session_state.voiceover_text = edited_text  # Update with edited text
-            generate_audio(edited_text, voice_name, speed)
+            generate_audio(edited_text, "nova", 1.0)  # Use default voice and speed
     
     # Volume adjustment sliders
     if st.session_state.audio_path is not None:
@@ -248,7 +236,7 @@ with col2:
                 st.download_button(
                     label="Download Video with Voiceover",
                     data=file,
-                    file_name=f"VoxOver_{Path(st.session_state.uploaded_video_path).stem}_{st.session_state.unique_id}.mp4",
+                    file_name=f"VoxOver_{Path(st.session_state.uploaded_video_path or 'video').stem}_{st.session_state.unique_id}.mp4",
                     mime="video/mp4",
                     key="download_button"
                 )
