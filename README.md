@@ -18,6 +18,7 @@ VoxOver is a Streamlit application that lets you add AI-generated voiceovers to 
 - Python 3.8+
 - FFmpeg (required for video and audio processing)
 - OpenAI API key
+- ElevenLabs API key
 
 ## Installation
 
@@ -58,6 +59,7 @@ pip install -r requirements.txt
 Create a `.env` file in the project root directory:
 ```
 OPENAI_API_KEY=your_openai_api_key_here
+ELEVENLABS_API_KEY=your_elevenlabs_api_key_here
 ```
 
 ### 5. Create Temp Directory

@@ -123,12 +123,12 @@ def generate_audio(voiceover_text, voice_name, speed):
 # Merge video with audio
 def merge_video_audio(video_path, audio_path, video_volume, audio_volume):
     try:
-        st.session_state.current_step = 6
+        st.session_state.current_step = 7
         merged_path = os.path.join(st.session_state.temp_dir, f"merged_{st.session_state.unique_id}.mp4")
         with st.spinner("Merging video with voiceover audio..."):
             merge_video_with_audio(video_path, audio_path, merged_path, video_volume, audio_volume)
             st.session_state.merged_video_path = merged_path
-            st.session_state.current_step = 7
+            st.session_state.current_step = 8
             st.session_state.processing_complete = True
         return merged_path
     except Exception as e:
@@ -144,7 +144,7 @@ col1, col2 = st.columns([3, 2])
 
 with col1:
     # Step progress indicator
-    steps = ["Upload Video", "Analyze Video", "Edit Script", "Generate Audio", "Set Volumes", "Merge Media", "Download"]
+    steps = ["Upload Video", "Analyze Video", "Edit Script", "Generate Audio", "Preview Audio", "Set Volumes", "Merge Media", "Download"]
     current_step = st.session_state.current_step
     progress_value = current_step / len(steps)
     
@@ -189,9 +189,15 @@ with col1:
             st.session_state.voiceover_text = edited_text  # Update with edited text
             generate_audio(edited_text, "nova", 1.0)  # Use default voice and speed
     
+    # Display audio player if audio has been generated
+    if st.session_state.audio_path is not None and os.path.exists(st.session_state.audio_path):
+        st.markdown('<div class="sub-header">Step 4: Preview Voiceover Audio</div>', unsafe_allow_html=True)
+        st.audio(st.session_state.audio_path, format="audio/mp3")
+        st.success("✅ Voiceover audio generated successfully! You can play it above and adjust volume settings below.")
+    
     # Volume adjustment sliders
     if st.session_state.audio_path is not None:
-        st.markdown('<div class="sub-header">Step 5: Adjust Volume Levels</div>', unsafe_allow_html=True)
+        st.markdown('<div class="sub-header">Step 6: Adjust Volume Levels</div>', unsafe_allow_html=True)
         vol_col1, vol_col2 = st.columns(2)
         
         with vol_col1:
@@ -230,7 +236,7 @@ with col2:
             st.video(st.session_state.merged_video_path)
             
             # Download button for final video
-            st.markdown('<div class="sub-header">Step 7: Download Final Video</div>', unsafe_allow_html=True)
+            st.markdown('<div class="sub-header">Step 8: Download Final Video</div>', unsafe_allow_html=True)
             
             with open(st.session_state.merged_video_path, "rb") as file:
                 st.download_button(

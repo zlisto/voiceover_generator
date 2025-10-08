@@ -43,6 +43,9 @@ def generate_voiceover_text(video_path, instructions):
     Returns:
         str: video voiceover text
     """
+    if not OPENAI_API_KEY or OPENAI_API_KEY == "your_openai_api_key_here":
+        raise ValueError("OpenAI API key is not set. Please create a .env file with your OPENAI_API_KEY.")
+    
     wps = 200/60 #200 words per minute/ 60 seconds
     duration_secs = get_video_duration(video_path)
     nwords_max = wps*duration_secs  
@@ -69,14 +72,15 @@ def generate_voiceover_audio(text,
 def generate_voiceover_audio_elevenlabs(text, 
                                         file_path,  
                                         model_id="eleven_multilingual_v2",    
-                                        voice_id="dR1Ptm3rjBUIbHiaywdJ",
+                                        voice_id="TVXO8KqQGXttCFwcv1Pd",
                                         speed=1.0):
     """
     Generate speech from text using ElevenLabs, with voice cloning.
 
     Loads ELEVEN_API_KEY from .env file using python-dotenv.
     """
-
+    if not ELEVENLABS_API_KEY or ELEVENLABS_API_KEY == "your_elevenlabs_api_key_here":
+        raise ValueError("ElevenLabs API key is not set. Please create a .env file with your ELEVENLABS_API_KEY.")
     
     client = ElevenLabs(
         api_key=ELEVENLABS_API_KEY,
