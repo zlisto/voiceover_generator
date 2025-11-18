@@ -11,22 +11,52 @@ load_dotenv()
 # Try to get secrets from Streamlit secrets (for cloud deployment), fallback to .env (for local)
 def get_secret(key, default=None):
     """Get secret from Streamlit secrets or environment variable"""
+    # Try Streamlit secrets first (for cloud deployment)
     try:
-        # Try Streamlit secrets first (for cloud deployment)
         import streamlit as st
-        if hasattr(st, 'secrets') and hasattr(st.secrets, 'get') and key in st.secrets:
-            return st.secrets[key]
+        if hasattr(st, 'secrets') and st.secrets is not None:
+            # Try accessing as dictionary
+            try:
+                if hasattr(st.secrets, '__contains__') and key in st.secrets:
+                    value = st.secrets[key]
+                    if value is not None and value != "":
+                        return value
+            except (TypeError, AttributeError, KeyError):
+                pass
+            
+            # Try accessing as attribute (Streamlit secrets can be accessed both ways)
+            try:
+                if hasattr(st.secrets, key):
+                    value = getattr(st.secrets, key)
+                    if value is not None and value != "":
+                        return value
+            except (AttributeError, TypeError):
+                pass
     except:
         pass
+    
     # Fallback to environment variable (for local development)
-    return os.getenv(key, default)
+    env_value = os.getenv(key, default)
+    return env_value
 
-OPENAI_API_KEY = get_secret("OPENAI_API_KEY")
-ELEVENLABS_API_KEY = get_secret('ELEVENLABS_API_KEY')
-ELEVENLABS_VOICE_ID = get_secret('ELEVENLABS_VOICE_ID')
-# Use custom variable names to avoid conflicts with system environment variables
-APP_USERNAME = get_secret('APP_USERNAME') or get_secret('USERNAME')
-APP_PASSWORD = get_secret('PASSWORD')
+# Load secrets lazily - they'll be loaded when first accessed
+# This ensures Streamlit secrets are available when accessed
+def _load_secrets():
+    """Load all secrets - call this after Streamlit is initialized"""
+    global OPENAI_API_KEY, ELEVENLABS_API_KEY, ELEVENLABS_VOICE_ID, APP_USERNAME, APP_PASSWORD
+    OPENAI_API_KEY = get_secret("OPENAI_API_KEY")
+    ELEVENLABS_API_KEY = get_secret('ELEVENLABS_API_KEY')
+    ELEVENLABS_VOICE_ID = get_secret('ELEVENLABS_VOICE_ID')
+    # Use custom variable names to avoid conflicts with system environment variables
+    APP_USERNAME = get_secret('APP_USERNAME') or get_secret('USERNAME')
+    APP_PASSWORD = get_secret('PASSWORD')
+
+# Initialize with environment variables first (for local dev)
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+ELEVENLABS_API_KEY = os.getenv('ELEVENLABS_API_KEY')
+ELEVENLABS_VOICE_ID = os.getenv('ELEVENLABS_VOICE_ID')
+APP_USERNAME = os.getenv('APP_USERNAME') or os.getenv('USERNAME')
+APP_PASSWORD = os.getenv('PASSWORD')
 
 jarvis = GenAI(OPENAI_API_KEY)
 

@@ -5,11 +5,13 @@ import time
 from pathlib import Path
 import uuid
 from utils import *
-# Explicitly ensure APP_USERNAME and APP_PASSWORD are available
+# Load secrets from Streamlit secrets (for cloud) or .env (for local)
+# This must be called after Streamlit is initialized
 try:
-    from utils import APP_USERNAME, APP_PASSWORD
+    from utils import _load_secrets, APP_USERNAME, APP_PASSWORD
+    _load_secrets()  # Reload secrets now that Streamlit is initialized
 except ImportError:
-    st.error("Error: Could not import APP_USERNAME and APP_PASSWORD from utils. Please check your .env file.")
+    st.error("Error: Could not import required modules from utils.")
     st.stop()
 
 # Page configuration
