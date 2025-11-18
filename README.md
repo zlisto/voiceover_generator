@@ -98,11 +98,17 @@ The app will open in your default web browser at [http://localhost:8501](http://
 
 ## Deploying to Streamlit Cloud
 
+See [DEPLOYMENT.md](DEPLOYMENT.md) for detailed deployment instructions.
+
+**Quick Start:**
 1. Push your code to GitHub
-2. Go to [Streamlit Cloud](https://streamlit.io/cloud)
-3. Connect your GitHub repository
-4. Add your OpenAI API key as a secret in the Streamlit Cloud dashboard
-5. Deploy the app
+2. Go to [Streamlit Community Cloud](https://share.streamlit.io/)
+3. Sign in with GitHub and click "New app"
+4. Select your repository and set main file to `app.py`
+5. Add your secrets (API keys, username, password) in the Settings → Secrets section
+6. Deploy!
+
+**Important:** Never commit your `.env` file. Use Streamlit's secrets management for cloud deployment.
 
 ## Troubleshooting
 
