@@ -5,6 +5,12 @@ import time
 from pathlib import Path
 import uuid
 from utils import *
+# Explicitly ensure APP_USERNAME and APP_PASSWORD are available
+try:
+    from utils import APP_USERNAME, APP_PASSWORD
+except ImportError:
+    st.error("Error: Could not import APP_USERNAME and APP_PASSWORD from utils. Please check your .env file.")
+    st.stop()
 
 # Page configuration
 st.set_page_config(
@@ -49,6 +55,8 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # Initialize session state variables if they don't exist
+if 'authenticated' not in st.session_state:
+    st.session_state.authenticated = False
 if 'temp_dir' not in st.session_state:
     st.session_state.temp_dir = tempfile.mkdtemp()
 if 'uploaded_video_path' not in st.session_state:
@@ -135,9 +143,51 @@ def merge_video_audio(video_path, audio_path, video_volume, audio_volume):
         st.session_state.processing_error = f"Error merging video with audio: {str(e)}"
         return None
 
-# Main app header
-st.markdown('<div class="main-header">🎙️ VoxOver: AI Narration Studio</div>', unsafe_allow_html=True)
-st.markdown('<div class="info-text">Create professional AI voiceovers for your videos with ease.</div>', unsafe_allow_html=True)
+# Authentication check
+if not st.session_state.authenticated:
+    # Login page
+    st.markdown('<div class="main-header">🔐 Login Required</div>', unsafe_allow_html=True)
+    st.markdown('<div class="info-text">Please enter your credentials to access VoxOver: AI Narration Studio</div>', unsafe_allow_html=True)
+    
+    # Center the login form
+    col1, col2, col3 = st.columns([1, 2, 1])
+    
+    with col2:
+        with st.form("login_form"):
+            st.markdown("### Enter Credentials")
+            username_input = st.text_input("Username", key="username_input")
+            password_input = st.text_input("Password", type="password", key="password_input")
+            login_button = st.form_submit_button("Login", use_container_width=True)
+            
+            if login_button:
+                # Strip whitespace from inputs and env values
+                username_input_clean = username_input.strip() if username_input else ""
+                password_input_clean = password_input.strip() if password_input else ""
+                username_env = APP_USERNAME.strip() if APP_USERNAME else ""
+                password_env = APP_PASSWORD.strip() if APP_PASSWORD else ""
+                
+                # Check if credentials are loaded from .env
+                if not username_env or not password_env:
+                    st.error("⚠️ Error: APP_USERNAME (or USERNAME) and PASSWORD must be set in .env file")
+                elif username_input_clean == username_env and password_input_clean == password_env:
+                    st.session_state.authenticated = True
+                    st.success("Login successful!")
+                    st.rerun()
+                else:
+                    st.error("Invalid username or password. Please try again.")
+    
+    st.stop()
+
+# Main app header (only shown if authenticated)
+col_header1, col_header2 = st.columns([4, 1])
+with col_header1:
+    st.markdown('<div class="main-header">🎙️ VoxOver: AI Narration Studio</div>', unsafe_allow_html=True)
+    st.markdown('<div class="info-text">Create professional AI voiceovers for your videos with ease.</div>', unsafe_allow_html=True)
+with col_header2:
+    if st.button("Logout", key="logout_button"):
+        st.session_state.authenticated = False
+        reset_app_state()
+        st.rerun()
 
 # Create two columns for the main layout
 col1, col2 = st.columns([3, 2])

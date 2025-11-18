@@ -5,14 +5,32 @@ from elevenlabs import ElevenLabs
 from elevenlabs import VoiceSettings
 from dotenv import load_dotenv
 
+# Load environment variables from .env file (for local development)
 load_dotenv()
 
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-ELEVENLABS_API_KEY = os.getenv('ELEVENLABS_API_KEY')
+# Try to get secrets from Streamlit secrets (for cloud deployment), fallback to .env (for local)
+def get_secret(key, default=None):
+    """Get secret from Streamlit secrets or environment variable"""
+    try:
+        # Try Streamlit secrets first (for cloud deployment)
+        import streamlit as st
+        if hasattr(st, 'secrets') and hasattr(st.secrets, 'get') and key in st.secrets:
+            return st.secrets[key]
+    except:
+        pass
+    # Fallback to environment variable (for local development)
+    return os.getenv(key, default)
+
+OPENAI_API_KEY = get_secret("OPENAI_API_KEY")
+ELEVENLABS_API_KEY = get_secret('ELEVENLABS_API_KEY')
+ELEVENLABS_VOICE_ID = get_secret('ELEVENLABS_VOICE_ID')
+# Use custom variable names to avoid conflicts with system environment variables
+APP_USERNAME = get_secret('APP_USERNAME') or get_secret('USERNAME')
+APP_PASSWORD = get_secret('PASSWORD')
 
 jarvis = GenAI(OPENAI_API_KEY)
 
-
+#You are Seemona an influencer describiing these Bose headphones for a sponsored post in IG
 
 
 
@@ -72,15 +90,22 @@ def generate_voiceover_audio(text,
 def generate_voiceover_audio_elevenlabs(text, 
                                         file_path,  
                                         model_id="eleven_multilingual_v2",    
-                                        voice_id="TVXO8KqQGXttCFwcv1Pd",
+                                        voice_id=None,
                                         speed=1.0):
     """
     Generate speech from text using ElevenLabs, with voice cloning.
 
-    Loads ELEVEN_API_KEY from .env file using python-dotenv.
+    Loads ELEVENLABS_API_KEY and ELEVENLABS_VOICE_ID from .env file using python-dotenv.
+    If voice_id is not provided, uses ELEVENLABS_VOICE_ID from environment variables.
     """
     if not ELEVENLABS_API_KEY or ELEVENLABS_API_KEY == "your_elevenlabs_api_key_here":
         raise ValueError("ElevenLabs API key is not set. Please create a .env file with your ELEVENLABS_API_KEY.")
+    
+    # Use voice_id from parameter if provided, otherwise use environment variable
+    if voice_id is None:
+        voice_id = ELEVENLABS_VOICE_ID
+        if voice_id is None:
+            raise ValueError("ELEVENLABS_VOICE_ID must be set in .env file or passed as parameter")
     
     client = ElevenLabs(
         api_key=ELEVENLABS_API_KEY,
